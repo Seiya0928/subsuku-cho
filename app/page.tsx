@@ -551,9 +551,11 @@ export default function HomePage() {
         </div>
 
         {/* ━━ フッター ━━ */}
-        <div className="pb-4 space-y-2 text-center">
-          <p className="text-gray-700 text-xs">
-            <a href="/legal" className="underline hover:text-gray-500">特定商取引法に基づく表記</a>
+        <div className="pb-4 text-center">
+          <p className="text-zinc-500 text-xs space-x-2">
+            <a href="/legal/privacy" className="underline hover:text-zinc-300">プライバシーポリシー</a>
+            <span>|</span>
+            <a href="/legal" className="underline hover:text-zinc-300">特定商取引法に基づく表記</a>
           </p>
         </div>
 
