@@ -128,7 +128,7 @@ export default function HomePage() {
               className="flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
             >
               <Crown size={12} />
-              {purchasing ? '処理中...' : '¥480 解放'}
+              {purchasing ? '処理中...' : '買い切り¥480で無制限化'}
             </button>
           ) : (
             <span className="flex items-center gap-1 text-amber-400 text-xs font-bold">
@@ -137,9 +137,38 @@ export default function HomePage() {
           )}
         </div>
 
+        {/* ヒーローセクション */}
+        {!premium && (
+          <div className="bg-gray-900 rounded-2xl p-5 space-y-3">
+            <h2 className="text-base font-bold leading-snug">
+              使っていないサブスクを見える化して、<br />毎月のムダを削減する
+            </h2>
+            <p className="text-gray-400 text-xs leading-relaxed">
+              登録するだけで、契約中のサブスク・月額合計・未使用の出費が一目で分かります。
+            </p>
+            <ul className="space-y-1.5">
+              {['無料で5件まで登録', '未使用サブスクを可視化', 'データはこのデバイス内だけに保存'].map(item => (
+                <li key={item} className="flex items-center gap-2 text-xs text-gray-300">
+                  <span className="text-amber-400">・</span>{item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {stripeError && (
           <div className="bg-red-950 border border-red-800 rounded-xl px-3 py-2">
             <p className="text-red-300 text-xs">エラー: {stripeError}</p>
+          </div>
+        )}
+
+        {/* 価値訴求カード */}
+        {!premium && (
+          <div className="bg-amber-950 border border-amber-900 rounded-2xl p-4 space-y-1.5">
+            <p className="text-amber-300 text-sm font-bold">たった1つサブスクを見直すだけで元が取れる</p>
+            <p className="text-amber-200/70 text-xs leading-relaxed">
+              毎月なんとなく払い続けているサービスを整理できれば、買い切り¥480の元はすぐに回収できます。
+            </p>
           </div>
         )}
 
@@ -309,7 +338,7 @@ export default function HomePage() {
               disabled={purchasing}
               className="mt-2 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold px-4 py-1.5 rounded-full transition-colors disabled:opacity-50"
             >
-              ¥480 で無制限に解放
+              買い切り¥480で登録数を無制限にする
             </button>
           </div>
         )}
@@ -405,6 +434,18 @@ export default function HomePage() {
             )}
           </div>
         )}
+
+        {/* 安心材料カード */}
+        <div className="bg-gray-900 rounded-2xl p-4 space-y-2">
+          <p className="text-xs font-bold text-gray-300">安心して使えます</p>
+          <ul className="space-y-1.5">
+            {['決済はStripeを使用', 'アカウント登録不要', 'データはこのデバイス内のみ保存'].map(item => (
+              <li key={item} className="flex items-center gap-2 text-xs text-gray-500">
+                <span className="text-green-500">✓</span>{item}
+              </li>
+            ))}
+          </ul>
+        </div>
 
         <p className="text-center text-gray-700 text-xs pb-2">
           データはこのデバイスにのみ保存されます
