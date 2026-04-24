@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { PlusCircle, Trash2, TrendingDown, Crown, ChevronDown, ChevronUp, Pencil, Check, ShieldCheck } from 'lucide-react';
+import { PlusCircle, Trash2, TrendingDown, Crown, ChevronDown, ChevronUp, Pencil, Check, ShieldCheck, AlertCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   Subscription, Category, CATEGORIES, CATEGORY_COLORS, PRESETS, BillingCycle,
@@ -44,7 +44,6 @@ export default function HomePage() {
   const appRef    = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // ダミーデータ：localStorageにキー自体がない初回のみ追加
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw === null) {
       const initial = DUMMY_DATA.map(d => ({ ...d, id: genId(), createdAt: new Date().toISOString() }));
@@ -116,10 +115,11 @@ export default function HomePage() {
   };
 
   // 集計
-  const monthlyTotal = subs.reduce((acc, s) => acc + toMonthly(s.amount, s.billingCycle), 0);
-  const yearlyTotal  = monthlyTotal * 12;
-  const activeTotal  = subs.filter(s => s.isActive).reduce((acc, s) => acc + toMonthly(s.amount, s.billingCycle), 0);
-  const wasteTotal   = subs.filter(s => !s.isActive).reduce((acc, s) => acc + toMonthly(s.amount, s.billingCycle), 0);
+  const monthlyTotal  = subs.reduce((acc, s) => acc + toMonthly(s.amount, s.billingCycle), 0);
+  const yearlyTotal   = monthlyTotal * 12;
+  const activeTotal   = subs.filter(s => s.isActive).reduce((acc, s) => acc + toMonthly(s.amount, s.billingCycle), 0);
+  const wasteTotal    = subs.filter(s => !s.isActive).reduce((acc, s) => acc + toMonthly(s.amount, s.billingCycle), 0);
+  const inactiveSubs  = subs.filter(s => !s.isActive);
 
   const categoryData = CATEGORIES.map(cat => ({
     name: cat,
@@ -130,6 +130,28 @@ export default function HomePage() {
 
   const canAdd = premium || subs.length < FREE_LIMIT;
   const presetNotAdded = PRESETS.filter(p => !subs.some(s => s.name === p.name));
+
+  // 動的CTAテキスト
+  const ctaLabel = wasteTotal > 0
+    ? `今すぐ¥${fmt(wasteTotal)}/月の無駄を止める（買い切り¥480）`
+    : '今すぐ無駄な支出を止める（買い切り¥480）';
+
+  const ctaHint = wasteTotal > 0
+    ? inactiveSubs.length === 1
+      ? `この中の1つを解約するだけで、¥${fmt(wasteTotal)}/月の支出を止められます`
+      : `未使用サブスクを見直すだけで、最大¥${fmt(wasteTotal)}/月の支出を止められます`
+    : 'たった1つ解約するだけで、このアプリ代は回収できます';
+
+  const PurchaseButton = ({ className }: { className?: string }) => (
+    <button
+      onClick={handlePurchase}
+      disabled={purchasing}
+      className={`w-full bg-amber-500 hover:bg-amber-400 text-black font-bold transition-colors disabled:opacity-50 flex flex-col items-center gap-0.5 ${className ?? 'text-sm py-3.5 rounded-xl'}`}
+    >
+      <span className="flex items-center gap-1.5"><Crown size={14} />{ctaLabel}</span>
+      <span className="text-xs font-normal opacity-70">一度の支払いで永久利用</span>
+    </button>
+  );
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -144,6 +166,7 @@ export default function HomePage() {
                 使っていないサブスクを<br />見える化して、<br />毎月のムダを削減する
               </h1>
               <p className="text-gray-400 text-sm leading-relaxed">
+                使っていないサブスクは、毎月静かにお金を減らします。<br />
                 登録するだけで、契約中のサブスクと月額合計が一目で分かる。
               </p>
             </div>
@@ -151,7 +174,7 @@ export default function HomePage() {
             <ul className="space-y-2">
               {[
                 '無料で5件まで登録可能',
-                '未使用サブスクに気づける',
+                '未使用の支出を見つけて、すぐに見直せる',
                 'データはこのデバイス内のみ保存',
               ].map(item => (
                 <li key={item} className="flex items-center gap-2.5 text-sm text-gray-300">
@@ -167,18 +190,9 @@ export default function HomePage() {
               >
                 無料で使う
               </button>
-              <div className="space-y-1">
-                <p className="text-center text-xs text-gray-400">
-                  たった1つ解約するだけで、このアプリ代は回収できます
-                </p>
-                <button
-                  onClick={handlePurchase}
-                  disabled={purchasing}
-                  className="w-full bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold py-3.5 rounded-xl transition-colors disabled:opacity-50 flex flex-col items-center gap-0.5"
-                >
-                  <span className="flex items-center gap-1.5"><Crown size={14} />今すぐ無駄な支出を止める（買い切り¥480）</span>
-                  <span className="text-xs font-normal opacity-70">一度の支払いで永久利用</span>
-                </button>
+              <div className="space-y-1.5">
+                <p className="text-center text-xs text-gray-400">{ctaHint}</p>
+                <PurchaseButton />
               </div>
             </div>
           </section>
@@ -214,6 +228,7 @@ export default function HomePage() {
 
         {/* ━━ サマリーカード（最重要：最大強調） ━━ */}
         <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
+          {/* 月額合計 */}
           <div className="text-center space-y-1">
             <p className="text-gray-400 text-xs font-medium tracking-wide">現在のサブスク支出</p>
             <p className="text-5xl font-black text-amber-400 leading-none">
@@ -223,11 +238,9 @@ export default function HomePage() {
             <p className="text-gray-400 text-sm mt-2">
               年間：約 <span className="text-white font-bold">¥{fmt(yearlyTotal)}</span>
             </p>
-            <p className="text-gray-500 text-xs mt-1 leading-relaxed">
-              この中に「使っていないサブスク」が含まれている可能性があります
-            </p>
           </div>
 
+          {/* 使用中 / 未使用 グリッド */}
           {subs.length > 0 && (
             <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-800">
               <div className="text-center">
@@ -237,22 +250,35 @@ export default function HomePage() {
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-gray-400 text-xs mb-0.5">未使用（無駄）</p>
-                <p className="text-red-400 font-bold text-xl">
+                <p className="text-gray-400 text-xs mb-0.5">未使用（損失）</p>
+                <p className={`font-bold text-xl ${wasteTotal > 0 ? 'text-red-400' : 'text-gray-600'}`}>
                   ¥{fmt(wasteTotal)}<span className="text-xs text-gray-500">/月</span>
                 </p>
               </div>
             </div>
           )}
 
-          {wasteTotal > 0 && (
-            <div className="bg-red-950 border border-red-900 rounded-xl p-3 flex items-start gap-2">
-              <TrendingDown size={16} className="text-red-400 mt-0.5 flex-shrink-0" />
-              <p className="text-red-300 text-xs leading-relaxed">
-                未使用サブスクで年間
-                <span className="font-bold text-red-200"> ¥{fmt(wasteTotal * 12)} </span>
-                が消えています。今すぐ解約を検討しましょう。
-              </p>
+          {/* ② 未使用合計の強調ブロック */}
+          {subs.length > 0 && (
+            <div className={`rounded-xl p-3.5 space-y-1 ${wasteTotal > 0 ? 'bg-red-950 border border-red-900' : 'bg-gray-800'}`}>
+              {wasteTotal > 0 ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <AlertCircle size={14} className="text-red-400 flex-shrink-0" />
+                    <p className="text-xs text-red-300 font-semibold">未使用の可能性がある支出</p>
+                  </div>
+                  <p className="text-red-200 text-2xl font-black pl-5">¥{fmt(wasteTotal)}<span className="text-sm font-normal opacity-70"> / 月</span></p>
+                  <p className="text-red-400/70 text-xs pl-5 leading-relaxed">
+                    この金額は今すぐ見直せる可能性があります。<br />
+                    年間換算で <span className="text-red-300 font-bold">¥{fmt(wasteTotal * 12)}</span> が消えています。
+                  </p>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-green-500 text-xs">✓</span>
+                  <p className="text-gray-400 text-xs">未使用の支出はまだありません</p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -309,71 +335,93 @@ export default function HomePage() {
             <p className="text-xs text-gray-600">価格は目安・編集可</p>
           </div>
 
-          {subs.map(s => (
-            <div
-              key={s.id}
-              className={`bg-gray-900 rounded-xl p-4 flex items-center gap-3 ${!s.isActive ? 'opacity-50' : ''}`}
-            >
+          {subs.map(s => {
+            const monthlyAmount = toMonthly(s.amount, s.billingCycle);
+            return (
               <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ background: CATEGORY_COLORS[s.category] }}
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium truncate">{s.name}</p>
-                  <span className="text-xs text-gray-500 flex-shrink-0">{s.category}</span>
-                </div>
-                {editingId === s.id ? (
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <span className="text-xs text-gray-400">¥</span>
-                    <input
-                      ref={editRef}
-                      type="number"
-                      value={editAmount}
-                      onChange={e => setEditAmount(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && commitEdit(s.id)}
-                      className="w-20 bg-gray-800 text-white text-xs rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                    <span className="text-xs text-gray-400">/{s.billingCycle === 'monthly' ? '月' : '年'}</span>
-                    <button onClick={() => commitEdit(s.id)} className="text-green-400 ml-1">
-                      <Check size={13} />
-                    </button>
+                key={s.id}
+                className={`rounded-xl p-4 flex items-start gap-3 ${
+                  s.isActive ? 'bg-gray-900' : 'bg-red-950/30 border border-red-900/50'
+                }`}
+              >
+                <div
+                  className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5"
+                  style={{ background: CATEGORY_COLORS[s.category] }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium truncate">{s.name}</p>
+                    <span className="text-xs text-gray-500 flex-shrink-0">{s.category}</span>
                   </div>
-                ) : (
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <p className="text-xs text-gray-400">
-                      ¥{fmt(s.amount)}/{s.billingCycle === 'monthly' ? '月' : '年'}
-                      {s.billingCycle === 'yearly' && (
-                        <span className="ml-1 text-gray-500">(月換算 ¥{fmt(toMonthly(s.amount, s.billingCycle))})</span>
+                  {editingId === s.id ? (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="text-xs text-gray-400">¥</span>
+                      <input
+                        ref={editRef}
+                        type="number"
+                        value={editAmount}
+                        onChange={e => setEditAmount(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && commitEdit(s.id)}
+                        className="w-20 bg-gray-800 text-white text-xs rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <span className="text-xs text-gray-400">/{s.billingCycle === 'monthly' ? '月' : '年'}</span>
+                      <button onClick={() => commitEdit(s.id)} className="text-green-400 ml-1">
+                        <Check size={13} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-0.5 space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs text-gray-400">
+                          ¥{fmt(s.amount)}/{s.billingCycle === 'monthly' ? '月' : '年'}
+                          {s.billingCycle === 'yearly' && (
+                            <span className="ml-1 text-gray-500">(月換算 ¥{fmt(monthlyAmount)})</span>
+                          )}
+                        </p>
+                        <button onClick={() => startEdit(s)} className="text-gray-600 hover:text-gray-400">
+                          <Pencil size={11} />
+                        </button>
+                      </div>
+                      {/* ① 未使用損失表示 */}
+                      {!s.isActive && (
+                        <p className="text-xs text-red-400 font-semibold">
+                          毎月¥{fmt(monthlyAmount)}の無駄
+                        </p>
                       )}
-                    </p>
-                    <button onClick={() => startEdit(s)} className="text-gray-600 hover:text-gray-400">
-                      <Pencil size={11} />
-                    </button>
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
+                  {/* ⑤ 未使用タグ強化 */}
+                  <button
+                    onClick={() => toggleActive(s.id)}
+                    className={`text-xs px-2 py-0.5 rounded-full border font-semibold transition-colors ${
+                      s.isActive
+                        ? 'border-green-800 text-green-500 bg-green-950/50'
+                        : 'border-red-700 text-red-400 bg-red-950/60'
+                    }`}
+                  >
+                    {s.isActive ? '使用中' : '未使用'}
+                  </button>
+                  <button
+                    onClick={() => remove(s.id)}
+                    className="text-gray-600 hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => toggleActive(s.id)}
-                  className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
-                    s.isActive
-                      ? 'border-green-700 text-green-400'
-                      : 'border-red-900 text-red-500'
-                  }`}
-                >
-                  {s.isActive ? '使用中' : '未使用'}
-                </button>
-                <button
-                  onClick={() => remove(s.id)}
-                  className="text-gray-600 hover:text-red-400 transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+
+        {/* ━━ CTA（非プレミアム・制限前） ━━ */}
+        {!premium && subs.length > 0 && canAdd && (
+          <div className="space-y-2">
+            <p className="text-center text-xs text-gray-400">{ctaHint}</p>
+            <PurchaseButton />
+          </div>
+        )}
 
         {/* ━━ 登録上限メッセージ ━━ */}
         {!canAdd && (
@@ -385,17 +433,8 @@ export default function HomePage() {
               </p>
             </div>
             <div className="space-y-1.5">
-              <p className="text-center text-xs text-amber-200/50">
-                たった1つ解約するだけで、このアプリ代は回収できます
-              </p>
-              <button
-                onClick={handlePurchase}
-                disabled={purchasing}
-                className="w-full bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold py-3 rounded-xl transition-colors disabled:opacity-50 flex flex-col items-center gap-0.5"
-              >
-                <span className="flex items-center gap-1.5"><Crown size={14} />今すぐ無駄な支出を止める（買い切り¥480）</span>
-                <span className="text-xs font-normal opacity-70">一度の支払いで永久利用</span>
-              </button>
+              <p className="text-center text-xs text-amber-200/50">{ctaHint}</p>
+              <PurchaseButton className="text-sm py-3 rounded-xl" />
             </div>
           </div>
         )}
@@ -489,23 +528,6 @@ export default function HomePage() {
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* ━━ CTA（非プレミアム向け） ━━ */}
-        {!premium && subs.length > 0 && canAdd && (
-          <div className="space-y-2">
-            <p className="text-center text-xs text-gray-400">
-              たった1つ解約するだけで、このアプリ代は回収できます
-            </p>
-            <button
-              onClick={handlePurchase}
-              disabled={purchasing}
-              className="w-full bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold py-3.5 rounded-xl transition-colors disabled:opacity-50 flex flex-col items-center gap-0.5"
-            >
-              <span className="flex items-center gap-1.5"><Crown size={14} />今すぐ無駄な支出を止める（買い切り¥480）</span>
-              <span className="text-xs font-normal opacity-70">一度の支払いで永久利用</span>
-            </button>
           </div>
         )}
 
