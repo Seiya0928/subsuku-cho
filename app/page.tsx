@@ -10,6 +10,8 @@ import {
   getSubscriptions, saveSubscriptions, isPremium, toMonthly, FREE_LIMIT,
 } from '@/lib/storage';
 
+const STORAGE_KEY = 'subsuku_cho_subs';
+
 function fmt(n: number) {
   return n.toLocaleString('ja-JP');
 }
@@ -22,6 +24,11 @@ const EMPTY: Omit<Subscription, 'id' | 'createdAt'> = {
   name: '', amount: 0, billingCycle: 'monthly', category: 'その他',
   renewalDay: 1, isActive: true, color: '#6b7280',
 };
+
+const DUMMY_DATA: Omit<Subscription, 'id' | 'createdAt'>[] = [
+  { name: 'Netflix',  amount: 790,  billingCycle: 'monthly', category: '動画', renewalDay: 1, isActive: true,  color: '#ef4444' },
+  { name: 'Spotify',  amount: 980,  billingCycle: 'monthly', category: '音楽', renewalDay: 1, isActive: false, color: '#22c55e' },
+];
 
 export default function HomePage() {
   const [subs, setSubs]             = useState<Subscription[]>([]);
@@ -37,7 +44,16 @@ export default function HomePage() {
   const appRef    = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setSubs(getSubscriptions());
+    // ダミーデータ：localStorageにキー自体がない初回のみ追加
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw === null) {
+      const initial = DUMMY_DATA.map(d => ({ ...d, id: genId(), createdAt: new Date().toISOString() }));
+      saveSubscriptions(initial);
+      setSubs(initial);
+    } else {
+      setSubs(getSubscriptions());
+    }
+
     setPrem(isPremium());
     const params = new URLSearchParams(window.location.search);
     const err = params.get('error');
@@ -123,13 +139,12 @@ export default function HomePage() {
         {!premium && (
           <section className="space-y-5 pt-2">
             <div className="space-y-3">
-              <p className="text-xs text-amber-400 font-semibold tracking-widest uppercase">お金を守るツール</p>
+              <p className="text-xs text-amber-400 font-semibold tracking-widest uppercase">無駄な支出を止めるツール</p>
               <h1 className="text-2xl font-black leading-snug tracking-tight">
                 使っていないサブスクを<br />見える化して、<br />毎月のムダを削減する
               </h1>
               <p className="text-gray-400 text-sm leading-relaxed">
-                登録するだけで、契約中のサブスクと月額合計が一目で分かります。<br />
-                気づかないうちに払い続けているサービスを、今すぐ整理しましょう。
+                登録するだけで、契約中のサブスクと月額合計が一目で分かる。
               </p>
             </div>
 
@@ -152,14 +167,19 @@ export default function HomePage() {
               >
                 無料で使う
               </button>
-              <button
-                onClick={handlePurchase}
-                disabled={purchasing}
-                className="w-full bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold py-3.5 rounded-xl transition-colors disabled:opacity-50 flex flex-col items-center gap-0.5"
-              >
-                <span className="flex items-center gap-1.5"><Crown size={14} />買い切り¥480で登録数を無制限にする</span>
-                <span className="text-xs font-normal opacity-70">一度の支払いで永久利用</span>
-              </button>
+              <div className="space-y-1">
+                <p className="text-center text-xs text-gray-400">
+                  たった1つ解約するだけで、このアプリ代は回収できます
+                </p>
+                <button
+                  onClick={handlePurchase}
+                  disabled={purchasing}
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold py-3.5 rounded-xl transition-colors disabled:opacity-50 flex flex-col items-center gap-0.5"
+                >
+                  <span className="flex items-center gap-1.5"><Crown size={14} />今すぐ無駄な支出を止める（買い切り¥480）</span>
+                  <span className="text-xs font-normal opacity-70">一度の支払いで永久利用</span>
+                </button>
+              </div>
             </div>
           </section>
         )}
@@ -192,37 +212,33 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* ━━ 価値訴求カード ━━ */}
-        {!premium && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 space-y-1.5">
-            <p className="text-white text-sm font-bold">たった1つ解約するだけで元が取れる</p>
-            <p className="text-gray-400 text-xs leading-relaxed">
-              NetflixやSpotifyなど1つ解約するだけで、このアプリの費用は回収できます。まず登録して、今いくら払っているか確認してみてください。
+        {/* ━━ サマリーカード（最重要：最大強調） ━━ */}
+        <div className="bg-gray-900 rounded-2xl p-6 space-y-4">
+          <div className="text-center space-y-1">
+            <p className="text-gray-400 text-xs font-medium tracking-wide">現在のサブスク支出</p>
+            <p className="text-5xl font-black text-amber-400 leading-none">
+              ¥{fmt(monthlyTotal)}
             </p>
-          </div>
-        )}
-
-        {/* ━━ サマリーカード ━━ */}
-        <div className="bg-gray-900 rounded-2xl p-5 space-y-4">
-          <div className="text-center">
-            <p className="text-gray-400 text-xs mb-1">月額合計</p>
-            <p className="text-4xl font-black text-white">¥{fmt(monthlyTotal)}</p>
-            <p className="text-gray-500 text-sm mt-1">
-              年間 <span className="text-white font-bold">¥{fmt(yearlyTotal)}</span>
+            <p className="text-sm font-bold text-amber-400 opacity-70">/ 月</p>
+            <p className="text-gray-400 text-sm mt-2">
+              年間：約 <span className="text-white font-bold">¥{fmt(yearlyTotal)}</span>
+            </p>
+            <p className="text-gray-500 text-xs mt-1 leading-relaxed">
+              この中に「使っていないサブスク」が含まれている可能性があります
             </p>
           </div>
 
           {subs.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-800">
+            <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-800">
               <div className="text-center">
-                <p className="text-gray-400 text-xs">使用中</p>
-                <p className="text-green-400 font-bold text-lg">
+                <p className="text-gray-400 text-xs mb-0.5">使用中</p>
+                <p className="text-green-400 font-bold text-xl">
                   ¥{fmt(activeTotal)}<span className="text-xs text-gray-500">/月</span>
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-gray-400 text-xs">未使用（無駄）</p>
-                <p className="text-red-400 font-bold text-lg">
+                <p className="text-gray-400 text-xs mb-0.5">未使用（無駄）</p>
+                <p className="text-red-400 font-bold text-xl">
                   ¥{fmt(wasteTotal)}<span className="text-xs text-gray-500">/月</span>
                 </p>
               </div>
@@ -296,7 +312,7 @@ export default function HomePage() {
           {subs.map(s => (
             <div
               key={s.id}
-              className={`bg-gray-900 rounded-xl p-3.5 flex items-center gap-3 ${!s.isActive ? 'opacity-50' : ''}`}
+              className={`bg-gray-900 rounded-xl p-4 flex items-center gap-3 ${!s.isActive ? 'opacity-50' : ''}`}
             >
               <div
                 className="w-2 h-2 rounded-full flex-shrink-0"
@@ -365,17 +381,22 @@ export default function HomePage() {
             <div>
               <p className="text-amber-300 text-sm font-bold">5件まで無料で使えます。</p>
               <p className="text-amber-200/70 text-xs mt-1 leading-relaxed">
-                これ以上登録するには、無制限化が必要です。買い切りなので追加料金は一切かかりません。
+                これ以上登録するには無制限化が必要です。
               </p>
             </div>
-            <button
-              onClick={handlePurchase}
-              disabled={purchasing}
-              className="w-full bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold py-3 rounded-xl transition-colors disabled:opacity-50 flex flex-col items-center gap-0.5"
-            >
-              <span className="flex items-center gap-1.5"><Crown size={14} />買い切り¥480で登録数を無制限にする</span>
-              <span className="text-xs font-normal opacity-70">一度の支払いで永久利用</span>
-            </button>
+            <div className="space-y-1.5">
+              <p className="text-center text-xs text-amber-200/50">
+                たった1つ解約するだけで、このアプリ代は回収できます
+              </p>
+              <button
+                onClick={handlePurchase}
+                disabled={purchasing}
+                className="w-full bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold py-3 rounded-xl transition-colors disabled:opacity-50 flex flex-col items-center gap-0.5"
+              >
+                <span className="flex items-center gap-1.5"><Crown size={14} />今すぐ無駄な支出を止める（買い切り¥480）</span>
+                <span className="text-xs font-normal opacity-70">一度の支払いで永久利用</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -468,6 +489,23 @@ export default function HomePage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ━━ CTA（非プレミアム向け） ━━ */}
+        {!premium && subs.length > 0 && canAdd && (
+          <div className="space-y-2">
+            <p className="text-center text-xs text-gray-400">
+              たった1つ解約するだけで、このアプリ代は回収できます
+            </p>
+            <button
+              onClick={handlePurchase}
+              disabled={purchasing}
+              className="w-full bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold py-3.5 rounded-xl transition-colors disabled:opacity-50 flex flex-col items-center gap-0.5"
+            >
+              <span className="flex items-center gap-1.5"><Crown size={14} />今すぐ無駄な支出を止める（買い切り¥480）</span>
+              <span className="text-xs font-normal opacity-70">一度の支払いで永久利用</span>
+            </button>
           </div>
         )}
 
