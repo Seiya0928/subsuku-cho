@@ -188,7 +188,7 @@ export default function HomePage() {
         <div ref={appRef} className="flex items-center justify-between pt-2">
           <div>
             <h2 className="text-lg font-bold">サブスク帳</h2>
-            <p className="text-xs text-gray-500">月額費用を一目で把握</p>
+            <p className="text-xs text-gray-500">無駄な支出を見える化する</p>
           </div>
           {!premium ? (
             <button
@@ -197,7 +197,7 @@ export default function HomePage() {
               className="flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
             >
               <Crown size={12} />
-              {purchasing ? '処理中...' : '無制限化 ¥480'}
+              {purchasing ? '処理中...' : '支出を止める ¥480'}
             </button>
           ) : (
             <span className="flex items-center gap-1 text-amber-400 text-xs font-bold">
