@@ -1,3 +1,6 @@
+import { ObfuscatedPhone } from '@/components/ObfuscatedPhone';
+import { ObfuscatedEmail } from '@/components/ObfuscatedEmail';
+
 export default function LegalPage() {
   return (
     <main className="max-w-2xl mx-auto px-6 py-12 text-gray-300">
@@ -19,11 +22,11 @@ export default function LegalPage() {
           </tr>
           <tr className="border-b border-gray-700">
             <th className="text-left py-4 pr-6 text-gray-400 whitespace-nowrap align-top">電話番号</th>
-            <td className="py-4">070-8456-7355</td>
+            <td className="py-4"><ObfuscatedPhone /></td>
           </tr>
           <tr className="border-b border-gray-700">
             <th className="text-left py-4 pr-6 text-gray-400 whitespace-nowrap align-top">連絡先</th>
-            <td className="py-4">zhenye271@gmail.com</td>
+            <td className="py-4"><ObfuscatedEmail /></td>
           </tr>
           <tr className="border-b border-gray-700">
             <th className="text-left py-4 pr-6 text-gray-400 whitespace-nowrap align-top">販売価格</th>
@@ -57,7 +60,7 @@ export default function LegalPage() {
       </table>
 
       <p className="mt-8 text-xs text-gray-500">
-        ご不明な点は <a href="mailto:zhenye271@gmail.com" className="underline">zhenye271@gmail.com</a> までお問い合わせください。
+        ご不明な点は <ObfuscatedEmail /> までお問い合わせください。
       </p>
 
       <div className="mt-8">

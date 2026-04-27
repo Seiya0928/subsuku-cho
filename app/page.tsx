@@ -9,6 +9,7 @@ import {
 import {
   getSubscriptions, saveSubscriptions, isPremium, toMonthly, FREE_LIMIT,
 } from '@/lib/storage';
+import { AddToHomeScreen } from '@/components/AddToHomeScreen';
 
 const STORAGE_KEY = 'subsuku_cho_subs';
 
@@ -195,6 +196,8 @@ export default function HomePage() {
                 <PurchaseButton />
               </div>
             </div>
+
+            <AddToHomeScreen />
           </section>
         )}
 
